@@ -15,17 +15,55 @@ var STRIP = {
 	defs : /\{[^\}]*?\}/g,
 	comments:  /\/\*[\s\S]*?\*\//g,
 	scope: /\([\s\S]*?\)/g,
-	query: /\[[\s\S]*?\]/g
+	query: /\[[\s\S]*?\]/g,
+	exclude: /collapse|show|social-icons|social-icon|links-social|links-text|navbar-nav|nav-item|nav-link/g
 }
 
-var SAFE_PREFIX = "obscure-";
+var SAFE_PREFIX = "roma-";
 var SEED = (new Date()).getTime();
-var OUTPUT = './obscure-'+SEED+'/';
+var OUTPUT = '';
+
+
+var TAAG ="\n                       .__        __   \n      ______________ __|__| _____/  |_ \n     /  ___/ ____|  |  |  |/    \\   __\\\n     \\___ < <_|  |  |  |  |   |  |  |  \n    /____  \\__   |____/|__|___|  |__|  \n         \\/   |__|             \\/      \n";
+
+var TAAG ="\n     ____  ____  ____  ____  _     ____  _____\n    /  _ \\/  _ \\/ ___\\/   _\\/ \\ /\\/  __\\/  __/\n    | / \\|| | //|    \\|  /  | | |||  \\/||  \\  \n    | \\_/|| |_\\\\\\___ ||  \\_ | \\_/||    /|  /_ \n    \\____/\\____/\\____/\\____/\\____/\\_/\\_\\\\____\\"
+//obscure style.css --exclude css\bootstrap.min.css --apply single.php,single-video.php,frontpage.php,footer.php,footer-social.php,content.php,page.php,partials\cards\mini.php,partials\cards\video.php,partials\cards\audio.php,partials\cards\post.php,header.php
+
+//console.log(process.argv[1]='obscure');
+
+process.argv[1]='obscure'; //rename for commander
+
+var program = require('commander');
+
+program
+	.usage("<include> [options]")
+	.version('1.0.1')
+	.arguments('<include>')
+	.option('-o, --output <output>', 'directory to output obfuscated files')
+	.option('-e, --exclude <exclude>', '.css file(s) containing definitions (classes and ids) to be excluded from obfuscation')
+	.option('-a, --apply <apply>', '.html file(s) to be obfuscated using the included definitions')
+	.option('-s, --seed <seed>', 'seed value for obfuscation term generation')
+	.action(function(include) {
+		if(include == undefined) console.log(program.helpInformation());
+		else {
+			program.include = include;
+
+			if(!program.seed) program.seed = SEED;
+			else program.seed = parseInt(program.seed);
+
+			if(!program.output) program.output = OUTPUT;
+			else if(program.output[program.output.length-1] != '/') program.output += '/';
+
+	    	obscure(program); //main entry point
+	    }
+	})
+	.parse(process.argv)
+
 
 function getDefinitions(cssString) {
 	//prep csstring, STRIPping out all the defs
 	for(var k in STRIP) {
-		cssString = cssString.replace(STRIP[k],'');
+		cssString = cssString.replace(STRIP[k],'');	
 	}
 	var matchs = [];
 	var match = DEFINITIONS_CAP.exec(cssString);
@@ -38,7 +76,7 @@ function getDefinitions(cssString) {
 }
 
 function globlist(s) {
-
+	
 	var split = s.split(',')
 	var list = []
 	for (var i in split) {
@@ -50,8 +88,7 @@ function globlist(s) {
 
 function obscure(opts) {
 
-  if(opts.output === undefined) opts.output = OUTPUT
-  if(opts.seed === undefined) opts.seed = OUTPUT
+	console.log(TAAG);
 
 	mkdirp.sync(opts.output)
 
@@ -76,7 +113,7 @@ function obscure(opts) {
 				excluded.push(selector);
 			}
 		}
-		console.log(" - " + _.size(excluded) + " excluded definitions ( classes and ids ) found in: " + opts.exclude  )
+		console.log(" - " + _.size(excluded) + " excluded definitions ( classes and ids ) found in: " + program.exclude  )
 	}
 
 
@@ -84,14 +121,14 @@ function obscure(opts) {
 	var includes = globlist(opts.include)
 	var csss = {};
 	var map = {};
-
+	
 	for(var t in includes) {
 		var path = includes[t];
 		var css = fs.readFileSync(path, 'utf8');
 		var defs = getDefinitions(css);
-
+		
 		csss[path] = css; //store to obfuscate later
-
+		
 		for(var i = 0; i<defs.length; i++) {
 			var selector = defs[i];
 
@@ -109,15 +146,15 @@ function obscure(opts) {
 		}
 	}
 
-	console.log(" - " + _.size(map) + " definitions ( classes and ids ) found in: " + opts.include  )
+	console.log(" - " + _.size(map) + " definitions ( classes and ids ) found in: " + program.include  )
 
 	var doms = {};
 	if(opts.apply) {
 
-		console.log("Building apply map...");
+		console.log("Building apply map...");	
 		// var applys = opts.apply.split(',');
 		var applys = opts.apply ? globlist(opts.apply) : [];
-
+		
 		for(var e in applys) {
 			var path = applys[e];
 			console.log(path);
@@ -160,7 +197,7 @@ function obscure(opts) {
 	}
 
 	for(var d in doms) {
-		safeWrite(opts.output + d, doms[d].html());
+		safeWrite(opts.output + d, doms[d].html());	
 	}
 	var allkeys = _.union(_.keys(csss),_.keys(doms));
 	console.log(" - " + (_.size(allkeys)) + " obfuscated files were successfully written: " + allkeys.join(',') );
@@ -178,6 +215,3 @@ function safeWrite(fd, buffer) {
 		else fs.writeFileSync(fd, buffer);
 	})
 }
-
-
-module.exports = obscure;
