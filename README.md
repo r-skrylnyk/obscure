@@ -39,3 +39,5 @@ Here's some examples on how to get that done:
 ##### Mixed
 
 	$ obscure *.css,app/style.css --apply *.html,app/index.html
+
+##### Test.
