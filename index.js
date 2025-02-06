@@ -16,7 +16,7 @@ var STRIP = {
         comments:  /\/\*[\s\S]*?\*\//g,
         scope: /\([\s\S]*?\)/g,
         query: /\[[\s\S]*?\]/g,
-        exclude: /collapse|show|social-icons|social-icon|links-social|links-text|navbar-nav|nav-item|nav-link|active|library|li:hover|font-marker|links-menu|navbar-toggler|navbar-toggler-icon/g
+        exclude: /collapse|show|social-icons|social-icon|links-social|links-text|navbar-nav|nav-item|nav-link|active|library|li:hover|font-marker|links-menu|navbar-toggler|navbar-toggler-icon|no-scroll|navbar|.open/g
 }
 
 var SAFE_PREFIX = "r";
