@@ -1,0 +1,7 @@
+template/
+audit.md
+.vscode/
+.git/
+.gitignore
+.gitattributes
+bin/

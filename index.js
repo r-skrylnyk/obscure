@@ -1,13 +1,12 @@
 #!/usr/bin/env node
 
-var mkdirp = require('mkdirp');
 var path = require('path');
 var _ = require('lodash');
 var fs = require('fs');
-var glob = require('glob');
+var { globSync } = require('glob');
 var cheerio = require('cheerio');
-var Hashids = require("hashids"),
-    hashids = new Hashids("what does that say?", 5);
+var Hashids = require('hashids/cjs');
+var hashids = new Hashids('what does that say?', 5);
 
 var DEFINITIONS_CAP = /([#.][\w-]+)/g;
 
@@ -24,73 +23,62 @@ var SEED = (new Date()).getTime();
 var OUTPUT = '';
 
 
-var TAAG ="\n                       .__        __   \n      ______________ __|__| _____/  |_ \n     /  ___/ ____|  |  |  |/    \\   __\\\n     \\___ < <_|  |  |  |  |   |  |  |  \n    /____  \\__   |____/|__|___|  |__|  \n         \\/   |__|             \\/      \n";
+var TAAG = "\n     ____  ____  ____  ____  _     ____  _____\n    /  _ \\/  _ \\/ ___\\/   _\\/ \\ /\\/  __\\/  __/\n    | / \\|| | //|    \\|  /  | | |||  \\/||  \\  \n    | \\_/|| |_\\\\\\___ ||  \\_ | \\_/||    /|  /_ \n    \\____/\\____/\\____/\\____/\\____/\\_/\\_\\\\____\\";
 
-var TAAG ="\n     ____  ____  ____  ____  _     ____  _____\n    /  _ \\/  _ \\/ ___\\/   _\\/ \\ /\\/  __\\/  __/\n    | / \\|| | //|    \\|  /  | | |||  \\/||  \\  \n    | \\_/|| |_\\\\\\___ ||  \\_ | \\_/||    /|  /_ \n    \\____/\\____/\\____/\\____/\\____/\\_/\\_\\\\____\\"
-//obscure style.css --exclude css\bootstrap.min.css --apply single.php,single-video.php,frontpage.php,footer.php,footer-social.php,content.php,page.php,partials\cards\mini.php,partials\cards\video.php,partials\cards\audio.php,partials\cards\post.php,header.php
+process.argv[1] = 'obscure'; //rename for commander
 
-//console.log(process.argv[1]='obscure');
-
-process.argv[1]='obscure'; //rename for commander
-
-var program = require('commander');
+var { Command } = require('commander');
+var program = new Command();
 
 program
-        .usage("<include> [options]")
-        .version('1.0.1')
-        .arguments('<include>')
+        .name('obscure')
+        .usage('<include> [options]')
+        .version('1.1.0')
+        .argument('<include>', '.css file(s) containing class/ID definitions to obfuscate')
         .option('-o, --output <output>', 'directory to output obfuscated files')
         .option('-e, --exclude <exclude>', '.css file(s) containing definitions (classes and ids) to be excluded from obfuscation')
         .option('-a, --apply <apply>', '.html file(s) to be obfuscated using the included definitions')
         .option('-s, --seed <seed>', 'seed value for obfuscation term generation')
-        .action(function(include) {
-                if(include == undefined) console.log(program.helpInformation());
-                else {
-                        program.include = include;
+        .action(function(include, opts) {
+                console.log(TAAG);
 
-                        if(!program.seed) program.seed = SEED;
-                        else program.seed = parseInt(program.seed);
+                var seed = opts.seed ? parseInt(opts.seed) : SEED;
+                var output = opts.output
+                        ? (opts.output[opts.output.length - 1] !== '/' ? opts.output + '/' : opts.output)
+                        : OUTPUT;
 
-                        if(!program.output) program.output = OUTPUT;
-                        else if(program.output[program.output.length-1] != '/') program.output += '/';
-
-                obscure(program); //main entry point
-            }
+                obscure({ include: include, seed: seed, output: output, exclude: opts.exclude, apply: opts.apply });
         })
         .parse(process.argv)
 
 
 function getDefinitions(cssString) {
-        //prep csstring, STRIPping out all the defs
-        for(var k in STRIP) {
-                cssString = cssString.replace(STRIP[k],'');
+        for (var k in STRIP) {
+                cssString = cssString.replace(STRIP[k], '');
         }
+        DEFINITIONS_CAP.lastIndex = 0; // reset global regex state between calls
         var matchs = [];
         var match = DEFINITIONS_CAP.exec(cssString);
         while (match != null) {
-                //console.log(match);
                 matchs.push(match[1]);
-        match = DEFINITIONS_CAP.exec(cssString);
+                match = DEFINITIONS_CAP.exec(cssString);
         }
         return _.uniq(matchs);
 }
 
 function globlist(s) {
-
-        var split = s.split(',')
-        var list = []
+        var split = s.split(',');
+        var list = [];
         for (var i in split) {
-                var files = glob.sync(split[i]);
-                list.push(files)
+                var files = globSync(split[i]);
+                list.push(files);
         }
         return _.uniq(_.flatten(list));
 }
 
 function obscure(opts) {
 
-        console.log(TAAG);
-
-        mkdirp.sync(opts.output)
+        if (opts.output) fs.mkdirSync(opts.output, { recursive: true });
 
         console.log();
         console.log(" * Obfuscation term generation using seed value of: " + opts.seed);
@@ -113,7 +101,7 @@ function obscure(opts) {
                                 excluded.push(selector);
                         }
                 }
-                console.log(" - " + _.size(excluded) + " excluded definitions ( classes and ids ) found in: " + program.exclude  )
+                console.log(" - " + _.size(excluded) + " excluded definitions ( classes and ids ) found in: " + opts.exclude)
         }
 
 
@@ -146,7 +134,7 @@ function obscure(opts) {
                 }
         }
 
-        console.log(" - " + _.size(map) + " definitions ( classes and ids ) found in: " + program.include  )
+        console.log(" - " + _.size(map) + " definitions ( classes and ids ) found in: " + opts.include)
 
         var doms = {};
         if(opts.apply) {
@@ -210,8 +198,6 @@ function obscure(opts) {
 
 function safeWrite(fd, buffer) {
         var dir = path.dirname(fd);
-        mkdirp(dir,(err)=>{
-                if(err) console.error(err);
-                else fs.writeFileSync(fd, buffer);
-        })
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(fd, buffer);
 }

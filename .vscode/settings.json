@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^node -e \"const Hashids = require\\('hashids/cjs'\\); const h = new Hashids\\('what does that say\\?', 5\\); console\\.log\\(h\\.encode\\(42\\)\\);\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

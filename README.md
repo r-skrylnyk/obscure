@@ -1,43 +1,120 @@
 # obscure
-*by Jason Yung - [http://callmejay.com](http://callmejay.com "http://callmejay.com")*
+*Оригінал: Jason Yung — [http://callmejay.com](http://callmejay.com)*  
+*Форк і оновлення: Roman Skrylnyk — [github.com/r-skrylnyk](https://github.com/r-skrylnyk/)*
 
-no nonsense obfuscation for html/css based frontend applications
+No nonsense obfuscation for HTML/CSS based frontend applications.  
+Перейменовує всі CSS-класи та ID у нечитабельні хеш-назви і застосовує зміни до HTML/PHP файлів.
 
-### Installing to Command Line
+---
 
-	$ npm install -g obscure
+## Встановлення
 
-### Basic Usage
-	
-	$ obscure style.css --apply index.html
+```bash
+npm install -g @etozheroma/obscure
+```
 
-This will grab all **ids and classes** (which I'm calling **definitions**) from `style.css` to be obfuscated, and apply that obfuscation to `index.html` (as well as `style.css` itself)
+---
 
-### Output Directory
+## Використання
 
-	$ obscure style.css --apply index.html --output ./obfuscated
-Use `--output` to specify where the obfuscated source files will be written
+### Базовий приклад
 
-### Exclusion 
+```bash
+obscure style.css --apply index.html
+```
 
-	$ obscure style.css --exclude bootstrap.css
+Бере всі **id та класи** з `style.css`, обфускує їх і застосовує зміни до `style.css` та `index.html`.
 
-You might have some **definitions** in you CSS that should not be obfuscated.  No problem, just `--exclude`
+---
 
-### Batch Support	
-Most likely you will be obfuscating multiple source files together.  
-Here's some examples on how to get that done:
+### Директорія виводу (`--output`)
 
-##### List
-	
-	$ obscure style.css,other.css --apply index.html,other.html
+```bash
+obscure style.css --apply index.html --output ./dist
+```
 
-##### Glob
+Обфусковані файли записуються у `./dist/`.  
+Також генерується `./dist/obscure.map` — JSON з таблицею відповідностей оригінал → обфускована назва.
 
-	$ obscure *.css --apply *.html
+---
 
-##### Mixed
+### Виключення (`--exclude`)
 
-	$ obscure *.css,app/style.css --apply *.html,app/index.html
+```bash
+obscure style.css --exclude bootstrap.css --apply index.html
+```
 
-##### Test.
+Класи та ID з `bootstrap.css` не будуть перейменовані.
+
+---
+
+### Фіксований сід (`--seed`)
+
+```bash
+obscure style.css --apply index.html --output ./dist --seed 42
+```
+
+Без `--seed` результат буде **різним при кожному запуску** (використовується `Date.now()`).  
+З `--seed` обфускація **відтворювана** — однаковий вхід завжди дає однаковий вихід. Рекомендовано для Docker CI/CD збірок.
+
+---
+
+### Батч-режим
+
+**Список через кому:**
+```bash
+obscure style.css,other.css --apply index.html,other.html
+```
+
+**Glob-шаблони:**
+```bash
+obscure *.css --apply *.html
+```
+
+**Змішано:**
+```bash
+obscure *.css,app/style.css --apply *.html,app/index.html
+```
+
+---
+
+## Використання у Docker
+
+```dockerfile
+FROM node:18-bullseye-slim AS builder
+
+RUN npm install -g @etozheroma/obscure@1.1.0
+
+WORKDIR /app
+COPY . .
+
+RUN obscure style.css --apply index.html --output /output/dist --seed 42
+
+FROM alpine:3.18
+COPY --from=builder /output/dist /dist
+```
+
+> У версії 1.1.0 більше не потрібно робити `COPY` кастомного `index.js` поверх npm-пакету — всі зміни вже включені у пакет.
+
+---
+
+## Зміни у версії 1.1.0 (форк)
+
+| Зміна | Деталі |
+|-------|--------|
+| `glob` v7 → v10 | `glob.sync()` → `globSync()` |
+| `hashids` v1 → v2 | Імпорт через `hashids/cjs` |
+| `cheerio` 0.20 → v1 | Актуальний API |
+| `commander` v2 → v12 | `new Command()`, правильна передача опцій в action |
+| `mkdirp` видалено | Замінено на вбудований `fs.mkdirSync({recursive: true})` |
+| Баг з `lastIndex` | `DEFINITIONS_CAP.lastIndex` скидається між файлами |
+| Баг `safeWrite` | Усунуто гонкову умову async/sync |
+| `bin` виправлено | Поле вказує безпосередньо на `index.js` |
+| Node.js | Мінімальна версія `>=16` |
+
+---
+
+## Ліцензія
+
+MIT — оригінал © 2016 Jason Yung (bitstrider), зміни © 2026 Roman Skrylnyk (etozheroma).  
+Дивіться [LICENSE](./LICENSE).
